@@ -1,9 +1,52 @@
-import { Program } from "acorn";
+import {
+  AnonymousFunctionDeclaration,
+  AnyNode,
+  ArrowFunctionExpression,
+  BlockStatement,
+  FunctionDeclaration,
+  Identifier,
+  Literal,
+  Program,
+  ReturnStatement,
+  VariableDeclaration,
+  VariableDeclarator,
+} from "acorn";
 import { SourceMapGenerator } from "source-map";
+
+type NodeHandler = (node: AnyNode) => void;
+
+type HandlerMap = {
+  [K in AnyNode["type"]]?: (node: Extract<AnyNode, { type: K }>) => void;
+};
 
 class Generator {
   private code = "";
   private indentLevel = 0;
+
+  private handlers: HandlerMap;
+
+  constructor() {
+    this.handlers = {
+      Program: this.Program.bind(this),
+      VariableDeclaration: this.VariableDeclaration.bind(this),
+      VariableDeclarator: this.VariableDeclarator.bind(this),
+      Identifier: this.Identifier.bind(this),
+      Literal: this.Literal.bind(this),
+      FunctionDeclaration: this.FunctionDeclaration.bind(this),
+      ArrowFunctionExpression: this.ArrowFunctionExpression.bind(this),
+      BlockStatement: this.BlockStatement.bind(this),
+      ReturnStatement: this.ReturnStatement.bind(this),
+    };
+  }
+
+  private callHandler(node: AnyNode): void {
+    const handler = this.handlers[node.type] as NodeHandler | undefined;
+    if (handler) {
+      handler(node);
+    }
+  }
+
+  // ========== Utility methods ==========
 
   private add(text: string) {
     this.code += text;
@@ -29,81 +72,110 @@ class Generator {
     });
   }
 
-  // Node handlers
+  // ========== Node handlers ==========
+
   Program(node: Program) {
-    node.body.forEach((stmt) => {
-      this[stmt.type](stmt);
+    node.body.forEach((statement) => {
+      this.callHandler(statement);
       this.add(";");
       this.newLine();
     });
   }
 
-  VariableDeclaration(node: any) {
-    this.add(node.kind + " ");
-    node.declarations.forEach((decl: any, i: number) => {
-      if (i > 0) this.add(", ");
-      this[decl.type](decl);
+  VariableDeclaration(node: VariableDeclaration) {
+    this.add(`${node.kind} `);
+    node.declarations.forEach((declaration, index) => {
+      if (index > 0) this.add(", ");
+      this.callHandler(declaration);
     });
   }
 
-  VariableDeclarator(node: any) {
-    this[node.id.type](node.id);
+  VariableDeclarator(node: VariableDeclarator) {
+    this.callHandler(node.id);
+
     if (node.init) {
       this.add(" = ");
-      this[node.init.type](node.init);
+      this.callHandler(node.init);
     }
   }
 
-  Identifier(node: any) {
+  Identifier(node: Identifier) {
     this.add(node.name);
   }
 
-  StringLiteral(node: any) {
-    this.add(`"${node.value}"`);
+  Literal(node: Literal) {
+    if (typeof node.value === "string") {
+      this.add(`"${node.value}"`);
+    } else {
+      this.add(String(node.value));
+    }
   }
 
-  NumericLiteral(node: any) {
-    this.add(String(node.value));
-  }
-
-  FunctionDeclaration(node: any) {
-    this.add(`function ${node.id.name}(`);
-    this.add(node.params.map((p: any) => p.name).join(", "));
+  FunctionDeclaration(
+    node: FunctionDeclaration | AnonymousFunctionDeclaration
+  ) {
+    if (node.id === null) {
+      this.add(`function(`);
+    } else {
+      this.add(`function ${node.id.name}(`);
+    }
+    this.add(
+      node.params
+        .filter((parameter) => parameter.type === "Identifier")
+        .map((parameter) => parameter.name)
+        .join(", ")
+    );
     this.add(") {");
     this.indent();
-    this[node.body.type](node.body);
+    this.callHandler(node.body);
     this.dedent();
     this.add("}");
   }
 
-  ArrowFunctionExpression(node: any) {
-    this.add("(");
-    this.add(node.params.map((p: any) => p.name).join(", "));
-    this.add(") => {");
+  ArrowFunctionExpression(node: ArrowFunctionExpression) {
+    this.add("function(");
+    this.add(
+      node.params
+        .filter((parameter) => parameter.type === "Identifier")
+        .map((parameter) => parameter.name)
+        .join(", ")
+    );
+    this.add(") {");
     this.indent();
-    this[node.body.type](node.body);
+
+    if (node.body.type === "BlockStatement") {
+      this.callHandler(node.body);
+    } else {
+      this.add("return ");
+      this.callHandler(node.body);
+      this.add(";");
+      this.newLine();
+    }
+
     this.dedent();
     this.add("}");
   }
 
-  BlockStatement(node: any) {
-    node.body.forEach((stmt: any) => {
-      this[stmt.type](stmt);
+  BlockStatement(node: BlockStatement) {
+    node.body.forEach((statement) => {
+      this.callHandler(statement);
       this.add(";");
       this.newLine();
     });
   }
 
-  ReturnStatement(node: any) {
+  ReturnStatement(node: ReturnStatement) {
     this.add("return");
     if (node.argument) {
       this.add(" ");
-      this[node.argument.type](node.argument);
+      this.callHandler(node.argument);
     }
   }
 
-  generate(node: any) {
-    this[node.type](node);
+  // ========== Entry Point ==========
+
+  generate(node: AnyNode) {
+    this.callHandler(node);
     return {
       code: this.code,
       map: this.generateSourceMap(),
