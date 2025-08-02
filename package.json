@@ -1,15 +1,20 @@
 {
-  "name": "babel",
+  "name": "babel-educational",
   "version": "1.0.0",
+  "description": "An educational implementation of Babel-like compiler features",
   "main": "index.js",
   "scripts": {
     "dev": "node --watch ./build/index.js",
     "typescript": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "babel",
+    "compiler",
+    "ast",
+    "education"
+  ],
+  "author": "Aleksei Volkov",
   "devDependencies": {
     "typescript": "^5.8.3"
   },
