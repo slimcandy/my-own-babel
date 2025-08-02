@@ -69,6 +69,7 @@ console.log(output); // "let y = 10;"
 
 ## Learning Resources
 
+- [Write your own Babel](https://mohammadtaheri.medium.com/write-your-own-babel-54ab880f1dfd) by Mohammad Taheri
 - [Babel Plugin Handbook](https://github.com/jamiebuilds/babel-handbook)
 - [AST Explorer](https://astexplorer.net/)
 - [Acorn Documentation](https://github.com/acornjs/acorn)
