@@ -31,6 +31,13 @@ traverse(ast, {
       }
     }
   },
+  VariableDeclaration(node) {
+    if (node.type === "VariableDeclaration") {
+      if (node.kind === "let") {
+        node.kind = "var";
+      }
+    }
+  },
 });
 
 console.log("\n🔁 Transformed AST:");

@@ -8,12 +8,9 @@ interface Visitor {
   exit?: VisitorFunction;
 }
 
-export type Visitors = {
-  enter?: VisitorFunction;
-  exit?: VisitorFunction;
-
+export interface Visitors extends Visitor {
   [nodeType: string]: Visitor | VisitorFunction | undefined;
-};
+}
 
 function getNodeField<T>(node: AnyNode, field: string): T | undefined {
   return (node as any)[field];
