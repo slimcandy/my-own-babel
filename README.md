@@ -1,4 +1,4 @@
-# Babel-like Compiler (Educational)
+# Educational Babel version
 
 This is an educational project that demonstrates how Babel works under the hood by implementing a simplified compiler with three main phases:
 
